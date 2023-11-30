@@ -10,10 +10,12 @@ import pyautogui
 from screeninfo import get_monitors
 import socketio
 import win32api, win32con
+import pyperclip
 sio = socketio.AsyncClient()
 f=0
 flask_server_url = "https://xixya.com/api"
 accumlatedmovment = [0,0,0]
+intime = time.time()        
 sense = 10 #mouse sensetivity
 shortcuts = {
     "Gui":"winleft",
@@ -50,20 +52,33 @@ async def roomjoin(id):
 @sio.on('mouseoffset')
 def on_mouseoffset(message):
     global accumlatedmovment
+    global intime
     # Handle the "mouseoffset" event
-
+    if len (message) > 3:
+        #use keyboard libary to press left mouse button
+        pyautogui.mouseDown()
+        time.sleep(0.05)
+        pyautogui.mouseUp()
+    #print(message)
     if int(message[0]) == 0:
         accumlatedmovment[0] += message[0] *sense
     if int(message[1]) == 0:
         accumlatedmovment[1] += message[1] *sense
     if accumlatedmovment[0] > sense/2 or accumlatedmovment[0] < -sense/2:
-        win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, int(accumlatedmovment[0]), 0, 0, 0)
+        #win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, int(accumlatedmovment[0]), 0, 0, 0)
         accumlatedmovment[0] = 0
     if accumlatedmovment[1] > sense/2 or accumlatedmovment[1] < -sense/2:
-        win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, 0, int(accumlatedmovment[1]), 0, 0)
+        #win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, 0, int(accumlatedmovment[1]), 0, 0)
         accumlatedmovment[1] = 0
-   
-    win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, int(message[0]*sense*(abs(message[0])/1)), int(message[1]*sense*(abs(message[1])/1)), 0, 0) #small amount of acceleration
+    
+    #win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, int(message[0]*sense*(abs(message[0])/1)), int(message[1]*sense*(abs(message[1])/1)), 0, 0) #small amount of acceleration
+    win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, int(message[0] * sense), int(message[1] * sense), 0, 0)
+    #print the delta time between mouseoffsets rounded to one sf
+    #print(round(time.time()-intime,1))
+    #move mouse up by one pixel
+    #win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, 0, 1, 0, 0)
+    
+    #intime = time.time()
 
    
 
@@ -158,7 +173,14 @@ async def clientcomms():
                     print("Command("+"type",str(outputmethod[0])+"):",body[0])
                     ping_interval = 0
                     if outputmethod[0] == 1:
-                        keyboard.write(body[0])
+                        #copy the output
+                        pyperclip.copy(body[0])
+                        #paste the output
+                        keyboard.press('ctrl')
+                        keyboard.press('v')
+                        time.sleep(0.05)
+                        keyboard.release('v')
+                        keyboard.release('ctrl')
                     elif outputmethod[0] == 2:
                         #body[0] = body[0].split(": ")[1]
                         keys = body[0].split("-")
