@@ -3,7 +3,7 @@
 import asyncio
 import sys
 import time
-import hi
+import random
 import requests
 import keyboard
 import pyautogui
@@ -14,13 +14,11 @@ import pyperclip
 import threading
 sio = socketio.AsyncClient()
 
-f=0
 flask_server_url = "https://xixya.com/api"
-accumlatedmovment = [0,0,0]
 intime = time.time()        
 delaytime = 0.2
-recentdelaytimes = []
-sense = 14 #mouse sensetivity
+counter = 0
+sense = 20 #mouse sensetivity
 
 
 
@@ -58,51 +56,59 @@ async def roomjoin(id):
 
 @sio.on('mouseoffset')
 def on_mouseoffset(message):
-    global accumlatedmovment
     global delaytime
     global intime
-    global recentdelaytimes
-    # Handle the "mouseoffset" event
+    global counter
     if len (message) > 3:
-        #use keyboard libary to press left mouse button
+        counter +=1
         pyautogui.mouseDown()
-        time.sleep(0.05)
+        time.sleep(0.01)
         pyautogui.mouseUp()
-
-    accumlatedmovment[0] += message[0]*sense
-    accumlatedmovment[1] += message[1]*sense*1.5
-    accumlatedmovment[2] += message[2]*sense
-    #win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, int(message[0] * sense), int(message[1] * sense), 0, 0)
+    #win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, int(message[0]*sense), int(message[1]*sense), 0, 0)
     timee = time.time()
-    recentdelaytimes.append(timee-intime)
-    if len(recentdelaytimes) > 15:
-        recentdelaytimes.pop(0)
-    try:
-        delaytime = sorted(recentdelaytimes)[-1]
-    except:pass
-    delaytime = timee-intime
+    delaytime = float(timee-intime)
     intime = timee
+    b = random.randint(0,30)
+    if delaytime < 0.1:
+        delaytime = 0.1
+    movexaccel = abs(message[0])
+    if movexaccel < 1:
+        movexaccel = 1
+    moveyaccel = abs(message[1])
+    if moveyaccel < 1:
+        moveyaccel = 1
+    counter +=1
+    my_thread = threading.Thread(target=mousemove, args=(message[0]*sense*movexaccel,message[1]*sense*moveyaccel,delaytime,counter))
+    my_thread.daemon = True
+    my_thread.start()
 
 # create a function that runs in a different thread to the main thread
-def mousemove():
-    global accumlatedmovment
-    movepercent = 0.1
-    while True:
-        tomove = [accumlatedmovment[0]*movepercent,accumlatedmovment[1]*movepercent]
-        if tomove[0] < 1 and tomove[0] > -1:
-            tomove[0] = 0
-        if tomove[1] < 1 and tomove[1] > -1:
-            tomove[1] = 0
-        accumlatedmovment[0] -= tomove[0]
-        accumlatedmovment[1] -= tomove[1]
+def mousemove(x,y,delaytime,count):
+    tomove = [0,0]
+    end = time.time()
+    if abs(x) > 20 or  abs(y) > 20:
+        ticks = 0.05
+    elif abs(x) > 10 or  abs(y) > 10:
+        ticks = 0.1
+    elif abs(x) > 5 or  abs(y) > 5:
+        ticks = 0.2
+    elif abs(x) > 2 or  abs(y) > 2:
+        ticks = 0.5
+        return
+    else:
+        ticks = 1
+    tomovee = delaytime*ticks
+    tomove = [x*ticks,y*ticks]
+    a=0
+    while a < 1/ticks:
+        if count != counter:
+            break
+        a+=1
         win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, int(tomove[0]), int(tomove[1]), 0, 0)
-        time.sleep(delaytime*movepercent)
-    
+        time.sleep(tomovee*1.0)
 
 
-my_thread = threading.Thread(target=mousemove)
-my_thread.daemon = True
-my_thread.start()
+
 
 
 screeninfo = []
@@ -118,7 +124,7 @@ if len(screeninfo) > 1:
     x = second_screen["x"] + 100
     y = second_screen["y"] - 20000
     
-    pyautogui.moveTo(x, y)
+    #pyautogui.moveTo(x, y)
 
 
 
@@ -257,51 +263,4 @@ async def clientcomms():
 asyncio.run(clientcomms())
 
 
-# make the key that is given accountwide, like a sub for user and password
-# then each session is logged in,
-
-# while True:
-#         if accumlatedmovment != lastaccumlatedmovment:
-#             lastaccumlatedmovment = list(accumlatedmovment)
-#             if abs(accumlatedmovment[0]) > int(1/movepercent):
-#                 pixelstomove.append([[accumlatedmovment[0],int(1/movepercent)]])
-#             elif abs(accumlatedmovment[0]) > int(0.5/movepercent):
-#                 pixelstomove.append([[accumlatedmovment[0],int(0.5/movepercent)]])
-#             elif abs(accumlatedmovment[0]) > int(0.2/movepercent):
-#                 pixelstomove.append([[accumlatedmovment[0],int(0.2/movepercent)]])
-#             else:
-#                 pixelstomove.append([[accumlatedmovment[0],0.1/movepercent]])
-#             if accumlatedmovment[1] > int(1/movepercent):
-#                 pixelstomove[-1].append([accumlatedmovment[1],int(1/movepercent)])
-#             elif accumlatedmovment[1] > int(0.5/movepercent):
-#                 pixelstomove[-1].append([accumlatedmovment[1],int(0.5/movepercent)])
-#             elif accumlatedmovment[1] > int(0.2/movepercent):
-#                 pixelstomove[-1].append([accumlatedmovment[1],int(0.2/movepercent)])
-#             else:
-#                 pixelstomove[-1].append([accumlatedmovment[1],0.1/movepercent])
-#             accumlatedmovment = [0,0,0]
-#         tomove = [0,0]
-#         for pixel in pixelstomove:
-#             flag = False
-#             if pixel[0][1] > 0:
-#                 pixel[0][1] -= 1
-#                 tomove[0] += pixel[0][0]*sense
-#                 Flag = True
-#             if pixel[1][1] > 0:
-#                 pixel[1][1] -= 1
-#                 tomove[1] += pixel[1][0]*sense
-#                 Flag = True
-#             if not flag:
-#                 pixelstomove.remove(pixel)
-                
-       
-
-
-
-        
-
-
-        
-#         win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, int(tomove[0]), int(tomove[1]), 0, 0)
-#         time.sleep(delaytime*movepercent)
-    
+ 
