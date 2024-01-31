@@ -1,13 +1,11 @@
 #pip install --trusted-host pypi.org --trusted-host files.pythonhosted.org screeninfo
 
 import asyncio
-import sys
 import time
 import random
 import requests
 import keyboard
 import pyautogui
-from screeninfo import get_monitors
 import socketio
 import win32api, win32con
 import pyperclip
@@ -18,8 +16,8 @@ flask_server_url = "https://xixya.com/api"
 intime = time.time()        
 delaytime = 0.2
 counter = 0
-sense = 20 #mouse sensetivity
-
+sense = 70 #mouse sensetivity
+lastmousestate = False
 
 
 shortcuts = {
@@ -51,6 +49,7 @@ async def roomjoin(id):
     await asyncio.sleep(1)
     
     await sio.connect('https://xixya.com', socketio_path='/api/socket.io/')
+    await sio.emit("/api/connect","typerclient")
     await sio.emit("/api/roominit", {'id': id})
 
 
@@ -59,11 +58,16 @@ def on_mouseoffset(message):
     global delaytime
     global intime
     global counter
-    if len (message) > 3:
-        counter +=1
+    global lastmousestate
+
+    if len(message) == 3:
+        if  lastmousestate == True:
+            pyautogui.mouseUp()
+            lastmousestate = False
+    elif  message[3] == True and lastmousestate == False:
         pyautogui.mouseDown()
-        time.sleep(0.01)
-        pyautogui.mouseUp()
+        lastmousestate = message[3]
+
     #win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, int(message[0]*sense), int(message[1]*sense), 0, 0)
     timee = time.time()
     delaytime = float(timee-intime)
@@ -77,6 +81,10 @@ def on_mouseoffset(message):
     moveyaccel = abs(message[1])
     if moveyaccel < 1:
         moveyaccel = 1
+    if moveyaccel > 3:
+        moveyaccel = 3
+    if movexaccel > 3:
+        movexaccel = 3
     counter +=1
     my_thread = threading.Thread(target=mousemove, args=(message[0]*sense*movexaccel,message[1]*sense*moveyaccel,delaytime,counter))
     my_thread.daemon = True
@@ -90,7 +98,7 @@ def mousemove(x,y,delaytime,count):
         ticks = 0.05
     elif abs(x) > 10 or  abs(y) > 10:
         ticks = 0.1
-    elif abs(x) > 5 or  abs(y) > 5:
+    elif abs(x) > 5 and  abs(y) > 5:
         ticks = 0.2
     elif abs(x) > 2 or  abs(y) > 2:
         ticks = 0.5
@@ -111,30 +119,30 @@ def mousemove(x,y,delaytime,count):
 
 
 
-screeninfo = []
-for m in get_monitors():
-    screeninfo.append({"x":m.x, "y":m.y, "width":m.width, "height":m.height,"name":m.name})
-#print(screeninfo)
+# screeninfo = []
+# for m in get_monitors():
+#     screeninfo.append({"x":m.x, "y":m.y, "width":m.width, "height":m.height,"name":m.name})
+# #print(screeninfo)
 
 
-if len(screeninfo) > 1:
-    second_screen = screeninfo[1]
+# if len(screeninfo) > 1:
+#     second_screen = screeninfo[1]
     
-    # Coordinates of the point on the virtual screen
-    x = second_screen["x"] + 100
-    y = second_screen["y"] - 20000
+#     # Coordinates of the point on the virtual screen
+#     x = second_screen["x"] + 100
+#     y = second_screen["y"] - 20000
     
-    #pyautogui.moveTo(x, y)
+#     #pyautogui.moveTo(x, y)
 
 
 
-def post_screeninfo(uid,screeninfo):
-    try:
-        response = requests.post(f"{flask_server_url}/setscreeninfo", json={"id":uid,"screeninfo":screeninfo})
-        if response.json()["message"] == "ok":
-            print("Connected")
-    except:
-        print("failed to connecet to main server")
+# def post_screeninfo(uid,screeninfo):
+#     try:
+#         response = requests.post(f"{flask_server_url}/setscreeninfo", json={"id":uid,"screeninfo":screeninfo})
+#         if response.json()["message"] == "ok":
+#             print("Connected")
+#     except:
+#         print("failed to connecet to main server")
 
 
 async def sendinput(input):
