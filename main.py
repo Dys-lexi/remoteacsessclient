@@ -225,16 +225,16 @@ async def clientcomms():
                         except Exception as e:
                             #print(e)
                             pass
-                        if multiple:
-                            print(texttowrite)
-                        
-                        #keyboard.write(texttowrite)
-                        pyperclip.copy(texttowrite)
-                        keyboard.press('ctrl')
-                        keyboard.press('v')
-                        time.sleep(0.05)
-                        keyboard.release('v')
-                        keyboard.release('ctrl')
+                        if not multiple and len(texttowrite) < 200:
+                            keyboard.write(texttowrite)
+                        else:
+                            #keyboard.write(texttowrite)
+                            pyperclip.copy(texttowrite)
+                            keyboard.press('ctrl')
+                            keyboard.press('v')
+                            time.sleep(0.05)
+                            keyboard.release('v')
+                            keyboard.release('ctrl')
                     elif outputmethod[0] == 2:
                         #body[0] = body[0].split(": ")[1]
                         keys = body[0].split("-")
