@@ -225,7 +225,7 @@ async def clientcomms():
                         except Exception as e:
                             #print(e)
                             pass
-                        if not multiple and len(texttowrite) < 200:
+                        if len(texttowrite) < 200:
                             keyboard.write(texttowrite)
                         else:
                             #keyboard.write(texttowrite)
