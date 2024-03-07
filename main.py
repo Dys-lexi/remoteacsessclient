@@ -7,7 +7,8 @@ import requests
 import keyboard
 import pyautogui
 import socketio
-import win32api, win32con
+import win32api
+import win32con
 import pyperclip
 import threading
 sio = socketio.AsyncClient()
@@ -18,7 +19,6 @@ delaytime = 0.2
 counter = 0
 sense = 70 #mouse sensetivity
 lastmousestate = False
-
 
 shortcuts = {
     "Gui":"winleft",
@@ -59,7 +59,6 @@ def on_mouseoffset(message):
     global intime
     global counter
     global lastmousestate
-
     if len(message) == 3:
         if  lastmousestate == True:
             pyautogui.mouseUp()
@@ -67,6 +66,11 @@ def on_mouseoffset(message):
     elif  message[3] == True and lastmousestate == False:
         pyautogui.mouseDown()
         lastmousestate = message[3]
+    # scroll up with pyautogui
+    if message[2] != 0:
+        thready = threading.Thread(target=scroll, args=(message[2],))
+        thready.daemon = True
+        thready.start()
 
     #win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, int(message[0]*sense), int(message[1]*sense), 0, 0)
     timee = time.time()
@@ -115,7 +119,8 @@ def mousemove(x,y,delaytime,count):
         win32api.mouse_event(win32con.MOUSEEVENTF_MOVE, int(tomove[0]), int(tomove[1]), 0, 0)
         time.sleep(tomovee*1.0)
 
-
+def scroll(y):
+    pyautogui.scroll(y)
 
 
 
@@ -225,7 +230,7 @@ async def clientcomms():
                         except Exception as e:
                             #print(e)
                             pass
-                        if len(texttowrite) < 200:
+                        if not multiple and len(texttowrite) < 200:
                             keyboard.write(texttowrite)
                         else:
                             #keyboard.write(texttowrite)
